@@ -1,0 +1,11 @@
+#!/usr/bin/python
+
+# See: http://www.tutorialspoint.com/python/python_command_line_arguments.htm
+import sys
+
+import string
+
+# TODO C simply print the args being given to the juju-log script.
+argv = sys.argv[1:]
+
+print string.join(argv, ' ')
