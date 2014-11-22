@@ -1,0 +1,127 @@
+#!/usr/bin/python
+
+# This is a simulation of 'juju' to enable juju to be used with e.g. vagrant.
+
+
+# example: ./juju deploy --repository=/vagrant/juju/deploy-graphite/charm local:precise/graphite
+
+
+# for handling the CLI parameters.
+import getopt
+
+# for getting the arguments.
+import sys
+
+# for getting the dirname.
+import os
+
+f_szSimulatedVersion = '0.7'
+
+
+                #     #    #      ###   #     #
+                ##   ##   # #      #    ##    #
+                # # # #  #   #     #    # #   #
+                #  #  # #     #    #    #  #  #
+                #     # #######    #    #   # #
+                #     # #     #    #    #    ##
+                #     # #     #   ###   #     #
+
+# For handling getop: http://docs.python.org/3.1/library/getopt.html
+
+szJujuCommand = sys.argv[1]
+
+if ( szJujuCommand != 'deploy' ):
+    print 'EEE Only the "deploy" is supported. Not "' + szJujuCommand +'".'
+    sys.exit(1)
+
+#print 'III Juju command: ' + szJujuCommand
+# juju deploy [options] CHARM_NAME [service_name]
+#  The above information is from: juju deploy --help
+
+bVerbose = False
+
+szScriptBasePath = os.path.dirname(sys.argv[0])
+print 'III Script base path: ' + szScriptBasePath
+
+# Add this scripts base path to the PATH environment, so config-get and juju-log can be found.
+os.environ["PATH"] += os.pathsep + szScriptBasePath
+
+argv = sys.argv[2:]
+try:
+    opts, args = getopt.getopt(argv,"hl:", ["config=", "constraints=", "environment=", "repository=", "version", "verbose", "log-file"])
+except getopt.GetoptError:
+    print 'getopt failed, now start to guess what the problem is.'
+    sys.exit(2)
+for opt, arg in opts:
+    if opt in ("-h", "--help"):
+        print '-h: This help text.'
+        print '-l: Log file name (not supported)'
+        print '--repository: Path to the repository, e.g. /vagrant/juju/deploy-graphite/charm'
+        print ''
+        print 'Usage: juju --repository=REPOSITORY_PATH CHARM [service_name]'
+        print '   CHARM:  local:precise/graphite'
+        sys.exit()
+    elif opt in ("--verbose"):
+        bVerbose = True
+    elif opt in ("--repository"):
+        szRepositoryPath = arg
+    elif opt in ("--version"):
+        print 'juju simulated version: ' + f_szSimulatedVersion
+    elif opt in ("--config"):
+        print 'WWW ' + opt + ' currently not supported, ignored.'
+    elif opt in ("--constraints"):
+        print 'WWW ' + opt + ' currently not supported, ignored.'
+    elif opt in ("--environment"):
+        print 'WWW ' + opt + ' currently not supported, ignored.'
+    elif opt in ("-l", "log-file"):
+        szLogFile = arg
+
+if ( 'szRepositoryPath' not in locals() ):
+    print 'EEE You must provide "--repository"'
+    sys.exit(2)
+
+if ( len(args) == 0 ):
+    print 'EEE You must provide the charm information at the end of the parm list.'
+    sys.exit(3)
+
+if ( len(args) != 1 ):
+    print 'EEE the juju-sim only supports the parm CHARM and nothing more.'
+    sys.exit(4)
+
+#print 'III The rest of the arguments: ' + repr(args)
+arCharmParameters = args[0].split(':')
+
+# print 'III The rest charm parameters: ' + repr(arCharmParameters) + ' from: ' + repr(args)
+
+if ( len(arCharmParameters) != 2 ):
+    print 'EEE wrong number of parameters in CHARM, expected 2, found ' + repr(len(arCharmParameters))
+    print '       ' + repr(arCharmParameters)
+    sys.exit(5)
+
+if ( arCharmParameters[0] != 'local' ):
+    print 'EEE Only "local" supported for CHARM type, not supported: "' + arCharmParameters[0] + '"'
+    sys.exit(6)
+
+szBasePath = szRepositoryPath + '/' + arCharmParameters[1]
+
+# TODO C prepend the path to the juju-sim path to the PATH variable to be able to provide a path to
+#          config-get
+#          juju-log
+# TODO C Set env var: CHARM_BASE_PATH, for get-config
+os.environ["CHARM_BASE_PATH"]=szBasePath
+
+szInstallScript = szBasePath + '/' + 'hooks/install'
+print 'III executing: os.system(' + szInstallScript + ')'
+print '---\n'
+nError = os.system(szInstallScript)
+
+if ( nError == 0 ):
+    szStartScript = szBasePath + '/' + 'hooks/start'
+    print 'III executing: os.system(' + szStartScript +')'
+    print '---\n'
+    nError = os.system(szStartScript)
+else:
+    print 'EEE Install script failed with error: ' + repr(nError)
+
+sys.exit(nError)
+
