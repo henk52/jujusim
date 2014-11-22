@@ -1,0 +1,88 @@
+$ cat config-get
+#!/usr/bin/python
+
+# example: ./juju deploy --repository=/home/me/vagrant_test/juju/deploy-graphite/charm local:precise/graphite
+
+# This scripts expects the following environment variables:
+#   CHARM_BASE_PATH: (Mandatory)
+#   CHARM_OVERLOAD_CONFIG_FILE: (Optional) Full path and filename to the config file provided to juju with the -config parameter.
+
+# If the parameter is found in either of the config files,
+#  then the string is returned, without a newline.
+#  otherwise no string is returned.
+
+# For os.environment.
+import os
+
+# for strip, split
+import string
+
+# See: http://www.tutorialspoint.com/python/python_command_line_arguments.htm
+# see, for stdout.write(): http://stackoverflow.com/questions/493386/how-to-print-in-python-without-newline-or-space
+import sys
+
+
+
+                #     #    #      ###   #     #
+                ##   ##   # #      #    ##    #
+                # # # #  #   #     #    # #   #
+                #  #  # #     #    #    #  #  #
+                #     # #######    #    #   # #
+                #     # #     #    #    #    ##
+                #     # #     #   ###   #     #
+
+
+
+
+# Get CLI args. (entry 0, is the name of this script.)
+argv = sys.argv[1:]
+
+
+# A single CLI parm is the only valid entry.
+if ( len(argv) == 1 ):
+    f_szVariableNameToLookFor = argv[0]
+elif ( len(argv) == 0 ):
+  print 'EEE You must provide the name of the variable to look up.'
+  sys.exit(1)
+elif ( len(argv) > 0 ):
+  print 'EEE You must only provide a single variable name.'
+  sys.exit(2)
+
+szCharmBasePath=os.environ["CHARM_BASE_PATH"]
+#print 'III Hi, this is "config-get" with a charm base path of: ' + szCharmBasePath
+
+# TODO V test if the config.yaml file exists, if not return empty string for all queries.
+
+# See: http://cmdlinetips.com/2011/08/three-ways-to-read-a-text-file-line-by-line-in-python/
+YAML_FILE_HANDLE = open(szCharmBasePath + '/config.yaml')
+
+bConfigVarNameFound = False
+bConfigValueFound = False
+
+szLine = YAML_FILE_HANDLE.readline()
+
+# Read lines from the config file, as long as there are lines and the value haven't been found yet.
+while ( szLine and not bConfigValueFound ):
+    szLine = YAML_FILE_HANDLE.readline()
+
+    if ( not bConfigVarNameFound ):
+        # string.strip() removes any leading and trailing whitespace characters.
+        if ( string.strip(szLine) == f_szVariableNameToLookFor + ':' ):
+            bConfigVarNameFound = True
+    else:
+        if ( string.find(string.lstrip(szLine), 'default:') == 0 ):
+            ( szDummy, szRawValue) = string.split(szLine, ':')
+            if ( string.find(szRawValue, '"') > -1 ):
+                arTemporaryArray = string.split(szRawValue, '"')
+                szConfigurationValue = arTemporaryArray[1]
+                bConfigValueFound = True
+            else:
+                szConfigurationValue = string.lstrip(szRawValue)
+                bConfigValueFound = True
+
+YAML_FILE_HANDLE.close()
+
+
+if 'szConfigurationValue' in locals():
+    sys.stdout.write(szConfigurationValue)
+
